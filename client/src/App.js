@@ -1,97 +1,101 @@
+// client/src/App.js
 import React, { useState } from 'react';
 
 function App() {
   const [text, setText] = useState('');
-  const [sections, setSections] = useState([]);
+  const [analysis, setAnalysis] = useState(null);
+  const [insights, setInsights] = useState(null);
   const [loading, setLoading] = useState(false);
 
+  // 1) 분석하기 핸들러
   const handleAnalyze = async () => {
-    if (!text.trim()) return alert('발화 데이터를 입력해 주세요.');
+    setInsights(null);
     setLoading(true);
-    setSections([]);
-
     try {
-      const response = await fetch('/analyze', {
+      const res = await fetch('/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text })
+        body: JSON.stringify({ text }),
       });
-      const data = await response.json();
-      const parsed = JSON.parse(data.result);
-      setSections(parsed);
+      const data = await res.json();
+      setAnalysis(data.analysis);
     } catch (err) {
-      console.error('분석 실패:', err);
-      setSections([
-        {
-          title: '❌ 오류',
-          content: '서버 연결 또는 GPT 분석 중 오류가 발생했습니다.\n관리자에게 문의하세요.',
-        },
-      ]);
+      console.error('분석 오류', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 2) 인사이트 얻기 핸들러
+  const handleInsights = async () => {
+    if (!analysis) return;
+    setLoading(true);
+    try {
+      const res = await fetch('/insights', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ analysis }),
+      });
+      const data = await res.json();
+      setInsights(data.insights);
+    } catch (err) {
+      console.error('인사이트 오류', err);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div style={{ padding: '2rem', fontFamily: 'Arial', maxWidth: '900px', margin: 'auto' }}>
-      <h1>🎓 Teachertype.ai</h1>
-      <p>수업 발화 데이터를 입력하면 AI가 6단계 분석을 통해 수업 인사이트를 제공합니다.</p>
-
+    <div className="p-4">
+      <h1 className="text-2xl mb-4">수업 발화 분석 & 인사이트 제안</h1>
       <textarea
-        rows="10"
-        cols="80"
+        rows={10}
+        className="w-full p-2 border rounded"
+        placeholder="원문 발화 데이터를 여기에 붙여넣으세요."
         value={text}
         onChange={(e) => setText(e.target.value)}
-        placeholder={`예:
-00:00 교사: 오늘은 동백꽃을 읽어볼 거야.
-00:05 교사: 동백꽃이 예쁘긴 한데 의미가 뭘까?`}
-        style={{
-          width: '100%',
-          padding: '1rem',
-          fontSize: '1rem',
-          marginBottom: '1rem',
-          borderRadius: '8px',
-          border: '1px solid #ccc',
-        }}
       />
-      <br />
+      <div className="mt-2">
+        <button
+          onClick={handleAnalyze}
+          disabled={loading || !text.trim()}
+          className="px-4 py-2 mr-2 bg-blue-500 text-white rounded disabled:opacity-50"
+        >
+          분석하기
+        </button>
+        {analysis && (
+          <button
+            onClick={handleInsights}
+            disabled={loading}
+            className="px-4 py-2 bg-green-500 text-white rounded disabled:opacity-50"
+          >
+            인사이트 얻기
+          </button>
+        )}
+      </div>
 
-      <button
-        onClick={handleAnalyze}
-        style={{
-          padding: '0.7rem 1.5rem',
-          fontSize: '1rem',
-          borderRadius: '6px',
-          backgroundColor: '#2196F3',
-          color: 'white',
-          border: 'none',
-        }}
-      >
-        {loading ? '분석 중...' : '분석하기'}
-      </button>
+      {loading && <p className="mt-4">처리 중...</p>}
 
-      {sections.length > 0 && (
-        <div style={{ marginTop: '2rem' }}>
-          <h2>📊 분석 결과</h2>
-          {sections.map((s, idx) => (
-            <div
-              key={idx}
-              style={{
-                background: '#f9f9f9',
-                padding: '1rem',
-                borderLeft: '5px solid #2196F3',
-                marginBottom: '1rem',
-                borderRadius: '6px',
-              }}
-            >
-              <h4>{s.title}</h4>
-              <pre style={{ whiteSpace: 'pre-wrap', fontSize: '0.9rem' }}>{s.content}</pre>
-            </div>
-          ))}
+      {analysis && (
+        <div className="mt-6">
+          <h2 className="text-xl mb-2">분석 결과</h2>
+          <pre className="bg-gray-100 p-4 rounded overflow-auto">
+            {JSON.stringify(analysis, null, 2)}
+          </pre>
+        </div>
+      )}
+
+      {insights && (
+        <div className="mt-6">
+          <h2 className="text-xl mb-2">인사이트 제안</h2>
+          <pre className="bg-gray-100 p-4 rounded overflow-auto">
+            {JSON.stringify(insights, null, 2)}
+          </pre>
         </div>
       )}
     </div>
-  );
+);
+
 }
 
 export default App;
