@@ -2,10 +2,7 @@
   "name": "client",
   "version": "0.1.0",
   "private": true,
-
-  // ⭐ Proxy 설정: 개발 환경에서 /analyze-stream → Express(3000)로 전달
   "proxy": "http://localhost:3000",
-
   "dependencies": {
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.6.3",
@@ -29,8 +26,12 @@
     "tailwindcss": "^4.1.7"
   },
   "browserslist": {
-    "production": [">0.2%","not dead","not op_mini all"],
-    "development":[
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
       "last 1 chrome version",
       "last 1 firefox version",
       "last 1 safari version"
