@@ -20,13 +20,12 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 /**
  * 수업 발화 데이터 분석용 시스템 프롬프트 생성
- * @param {string} text - 원문 발화 데이터
- * @returns {string}
+ * — 마크다운 코드블록 없이 순수 JSON만 반환하도록 지시
  */
 function createAnalysisPrompt(text) {
   return `당신은 수업 발화 데이터를 분석하는 전문가 GPT입니다.
-
-아래 4단계 절차에 따라 JSON 객체를 생성하세요.
+  
+아래 4단계 절차에 따라 **마크다운 구문 없이 순수 JSON만** 반환하세요.
 
 1. 전처리 (Preprocessing)
    - 발화 구분: "교사: …" 또는 "학생: …"로 정렬, 중복·중첩 병합
@@ -54,19 +53,20 @@ function createAnalysisPrompt(text) {
    - 어휘 다양성 (TTR)
    - 감성 비율 (긍정 vs 부정 어휘)
 
-출력 형식 예시:
+**아래 예시처럼 순수 JSON**만 반환하세요:
+
 {
   "전처리": [
     { "speaker":"교사", "segment":"도입", "text":"…" },
-    ...
+    …
   ],
   "유형 분류": [
     { "id":1, "category":["Questioning"] },
-    ...
+    …
   ],
   "질문 분석": [
     { "id":2, "type":"Open", "mode":"Convergent", "bloom":"Apply" },
-    ...
+    …
   ],
   "상호작용 분석": {
     "ratio":1.2,
@@ -84,8 +84,6 @@ ${text}
 
 /**
  * 인사이트 생성용 시스템 프롬프트 생성
- * @param {object} analysis - 분석 결과 JSON
- * @returns {string}
  */
 function createInsightPrompt(analysis) {
   const data = JSON.stringify(analysis, null, 2);
@@ -98,7 +96,7 @@ ${data}
 `;
 }
 
-// 1) 비스트리밍 분석
+// 1) 비스트리밍 분석 엔드포인트
 app.post('/analyze', async (req, res) => {
   const { text } = req.body;
   const prompt = createAnalysisPrompt(text);
@@ -116,11 +114,12 @@ app.post('/analyze', async (req, res) => {
   }
 });
 
-// 2) 스트리밍 분석
+// 2) 스트리밍 분석 엔드포인트
 app.post('/analyze-stream', async (req, res) => {
   const { text } = req.body;
   const prompt = createAnalysisPrompt(text);
 
+  // 스트리밍 헤더
   res.writeHead(200, {
     'Content-Type': 'application/json; charset=utf-8',
     'Transfer-Encoding': 'chunked',
@@ -140,7 +139,7 @@ app.post('/analyze-stream', async (req, res) => {
   res.end();
 });
 
-// 3) 인사이트 생성
+// 3) 인사이트 생성 엔드포인트
 app.post('/insights', async (req, res) => {
   const { analysis } = req.body;
   const prompt = createInsightPrompt(analysis);
@@ -161,7 +160,7 @@ app.post('/insights', async (req, res) => {
   }
 });
 
-// 4) 정적 파일 서빙 & SPA Fallback
+// 4) React 빌드 결과 서빙 & SPA Fallback
 const clientBuildPath = path.join(__dirname, '../client/build');
 app.use(express.static(clientBuildPath));
 app.use((req, res) => {
