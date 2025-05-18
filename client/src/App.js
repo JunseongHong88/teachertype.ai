@@ -8,9 +8,8 @@ function App() {
   const [insights, setInsights] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // 스트리밍 분석 핸들러 (fetch + ReadableStream)
   const handleAnalyze = async () => {
-    setAnalysis(null);
+    setAnalysis('');
     setInsights(null);
     setLoading(true);
 
@@ -29,8 +28,7 @@ function App() {
         const { value, done } = await reader.read();
         if (done) break;
         buffer += decoder.decode(value, { stream: true });
-        // (선택) 부분 렌더링:
-        // setAnalysis(JSON.parse(buffer));
+        setAnalysis(buffer);
       }
 
       const result = JSON.parse(buffer);
@@ -42,9 +40,8 @@ function App() {
     }
   };
 
-  // 인사이트 생성 핸들러
   const handleInsights = async () => {
-    if (!analysis) return;
+    if (!analysis || typeof analysis !== 'object') return;
     setLoading(true);
     try {
       const res = await fetch('/insights', {
@@ -61,7 +58,6 @@ function App() {
     }
   };
 
-  // 발화자별 색상 유틸
   const getItemClass = (item) => {
     if (item.startsWith('교사')) return 'text-red-600';
     if (item.startsWith('학생')) return 'text-blue-600';
@@ -90,7 +86,7 @@ function App() {
           >
             분석하기
           </button>
-          {analysis && (
+          {analysis && typeof analysis === 'object' && (
             <button
               onClick={handleInsights}
               disabled={loading}
@@ -103,7 +99,13 @@ function App() {
 
         {loading && <p className="text-center text-gray-600 mt-4">처리 중...</p>}
 
-        {analysis && (
+        {analysis && typeof analysis === 'string' && (
+          <pre className="whitespace-pre-wrap bg-gray-50 p-4 rounded-lg max-h-64 overflow-auto mt-8">
+            {analysis}
+          </pre>
+        )}
+
+        {analysis && typeof analysis === 'object' && (
           <div className="mt-8">
             <h2 className="text-2xl font-semibold text-center mb-4">
               분석 결과
