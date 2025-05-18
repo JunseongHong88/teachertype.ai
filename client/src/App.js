@@ -77,22 +77,32 @@ function App() {
         {analysis && (
           <div className="mt-8">
             <h2 className="text-2xl font-semibold text-center mb-4">분석 결과</h2>
-            <div className="bg-gray-50 border border-gray-200 p-4 rounded-lg max-h-96 overflow-auto">
-              <pre className="text-sm font-mono whitespace-pre-wrap">
-                {JSON.stringify(analysis, null, 2)}
-              </pre>
-            </div>
+            {Object.entries(analysis).map(([section, items]) => (
+              <div key={section} className="mb-6">
+                <h3 className="text-xl font-medium mb-2">{section}</h3>
+                <ul className="list-disc list-inside space-y-1 max-h-64 overflow-auto">
+                  {items.map((item, idx) => (
+                    <li key={idx} className="text-gray-700">
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
           </div>
         )}
 
         {insights && (
           <div className="mt-8">
             <h2 className="text-2xl font-semibold text-center mb-4">인사이트 제안</h2>
-            <div className="bg-gray-50 border border-gray-200 p-4 rounded-lg max-h-96 overflow-auto">
-              <pre className="text-sm font-mono whitespace-pre-wrap">
-                {JSON.stringify(insights, null, 2)}
-              </pre>
-            </div>
+            <ul className="list-decimal list-inside space-y-2">
+              {insights.map((insight, idx) => (
+                <li key={idx} className="bg-gray-50 p-4 rounded-lg shadow-sm">
+                  <p className="font-semibold">{insight.idea}</p>
+                  <p className="text-gray-600 mt-1">{insight.description}</p>
+                </li>
+              ))}
+            </ul>
           </div>
         )}
       </div>
