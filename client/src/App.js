@@ -7,7 +7,6 @@ function App() {
   const [insights, setInsights] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // 1) 분석하기 핸들러
   const handleAnalyze = async () => {
     setInsights(null);
     setLoading(true);
@@ -26,7 +25,6 @@ function App() {
     }
   };
 
-  // 2) 인사이트 얻기 핸들러
   const handleInsights = async () => {
     if (!analysis) return;
     setLoading(true);
@@ -46,56 +44,60 @@ function App() {
   };
 
   return (
-    <div className="p-4">
-      <h1 className="text-2xl mb-4">수업 발화 분석 & 인사이트 제안</h1>
-      <textarea
-        rows={10}
-        className="w-full p-2 border rounded"
-        placeholder="원문 발화 데이터를 여기에 붙여넣으세요."
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-      />
-      <div className="mt-2">
-        <button
-          onClick={handleAnalyze}
-          disabled={loading || !text.trim()}
-          className="px-4 py-2 mr-2 bg-blue-500 text-white rounded disabled:opacity-50"
-        >
-          분석하기
-        </button>
-        {analysis && (
+    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-lg p-8 max-w-3xl w-full">
+        <h1 className="text-3xl font-semibold text-center mb-6">수업 발화 분석 & 인사이트 제안</h1>
+        <textarea
+          className="w-full h-64 p-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 resize-y"
+          placeholder="원문 발화 데이터를 여기에 붙여넣으세요."
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+        />
+        <div className="flex justify-center space-x-4 mt-4">
           <button
-            onClick={handleInsights}
-            disabled={loading}
-            className="px-4 py-2 bg-green-500 text-white rounded disabled:opacity-50"
+            onClick={handleAnalyze}
+            disabled={loading || !text.trim()}
+            className="px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition-opacity disabled:opacity-50"
           >
-            인사이트 얻기
+            분석하기
           </button>
+          {analysis && (
+            <button
+              onClick={handleInsights}
+              disabled={loading}
+              className="px-6 py-2 bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg transition-opacity disabled:opacity-50"
+            >
+              인사이트 얻기
+            </button>
+          )}
+        </div>
+
+        {loading && <p className="text-center text-gray-600 mt-4">처리 중...</p>}
+
+        {analysis && (
+          <div className="mt-8">
+            <h2 className="text-2xl font-semibold text-center mb-4">분석 결과</h2>
+            <div className="bg-gray-50 border border-gray-200 p-4 rounded-lg max-h-96 overflow-auto">
+              <pre className="text-sm font-mono whitespace-pre-wrap">
+                {JSON.stringify(analysis, null, 2)}
+              </pre>
+            </div>
+          </div>
+        )}
+
+        {insights && (
+          <div className="mt-8">
+            <h2 className="text-2xl font-semibold text-center mb-4">인사이트 제안</h2>
+            <div className="bg-gray-50 border border-gray-200 p-4 rounded-lg max-h-96 overflow-auto">
+              <pre className="text-sm font-mono whitespace-pre-wrap">
+                {JSON.stringify(insights, null, 2)}
+              </pre>
+            </div>
+          </div>
         )}
       </div>
-
-      {loading && <p className="mt-4">처리 중...</p>}
-
-      {analysis && (
-        <div className="mt-6">
-          <h2 className="text-xl mb-2">분석 결과</h2>
-          <pre className="bg-gray-100 p-4 rounded overflow-auto">
-            {JSON.stringify(analysis, null, 2)}
-          </pre>
-        </div>
-      )}
-
-      {insights && (
-        <div className="mt-6">
-          <h2 className="text-xl mb-2">인사이트 제안</h2>
-          <pre className="bg-gray-100 p-4 rounded overflow-auto">
-            {JSON.stringify(insights, null, 2)}
-          </pre>
-        </div>
-      )}
     </div>
-);
-
+  );
 }
 
 export default App;
