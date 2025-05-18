@@ -1,4 +1,3 @@
-// client/src/App.js
 import React, { useState } from 'react';
 
 function App() {
@@ -12,7 +11,7 @@ function App() {
     setSections([]);
 
     try {
-      const response = await fetch('http://localhost:3001/analyze', {
+      const response = await fetch('/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text })
@@ -22,7 +21,12 @@ function App() {
       setSections(parsed);
     } catch (err) {
       console.error('분석 실패:', err);
-      setSections([{ title: '오류', content: '서버 연결 또는 GPT 분석 중 오류가 발생했습니다.' }]);
+      setSections([
+        {
+          title: '❌ 오류',
+          content: '서버 연결 또는 GPT 분석 중 오류가 발생했습니다.\n관리자에게 문의하세요.',
+        },
+      ]);
     } finally {
       setLoading(false);
     }
@@ -41,11 +45,28 @@ function App() {
         placeholder={`예:
 00:00 교사: 오늘은 동백꽃을 읽어볼 거야.
 00:05 교사: 동백꽃이 예쁘긴 한데 의미가 뭘까?`}
-        style={{ width: '100%', padding: '1rem', fontSize: '1rem', marginBottom: '1rem', borderRadius: '8px' }}
+        style={{
+          width: '100%',
+          padding: '1rem',
+          fontSize: '1rem',
+          marginBottom: '1rem',
+          borderRadius: '8px',
+          border: '1px solid #ccc',
+        }}
       />
       <br />
 
-      <button onClick={handleAnalyze} style={{ padding: '0.7rem 1.5rem', fontSize: '1rem', borderRadius: '6px' }}>
+      <button
+        onClick={handleAnalyze}
+        style={{
+          padding: '0.7rem 1.5rem',
+          fontSize: '1rem',
+          borderRadius: '6px',
+          backgroundColor: '#2196F3',
+          color: 'white',
+          border: 'none',
+        }}
+      >
         {loading ? '분석 중...' : '분석하기'}
       </button>
 
@@ -53,7 +74,16 @@ function App() {
         <div style={{ marginTop: '2rem' }}>
           <h2>📊 분석 결과</h2>
           {sections.map((s, idx) => (
-            <div key={idx} style={{ background: '#f9f9f9', padding: '1rem', borderLeft: '5px solid #2196F3', marginBottom: '1rem', borderRadius: '6px' }}>
+            <div
+              key={idx}
+              style={{
+                background: '#f9f9f9',
+                padding: '1rem',
+                borderLeft: '5px solid #2196F3',
+                marginBottom: '1rem',
+                borderRadius: '6px',
+              }}
+            >
               <h4>{s.title}</h4>
               <pre style={{ whiteSpace: 'pre-wrap', fontSize: '0.9rem' }}>{s.content}</pre>
             </div>

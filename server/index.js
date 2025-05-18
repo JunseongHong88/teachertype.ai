@@ -1,15 +1,22 @@
-// server/index.js
 const express = require('express');
 const cors = require('cors');
 const { OpenAI } = require('openai');
+const path = require('path');
 require('dotenv').config();
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+// GPT 연동 설정
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
+// 프론트엔드 정적 파일 서빙 설정
+app.use(express.static(path.join(__dirname, '../client/build')));
+
+// 분석 요청 처리 라우터
 app.post('/analyze', async (req, res) => {
   const { text } = req.body;
 
@@ -34,12 +41,10 @@ app.post('/analyze', async (req, res) => {
 
 사용자가 제공한 발화 데이터:
 """
-
 ${text}
-
 """
 각 단계를 분리하여 JSON으로 출력하세요.
-`;
+  `;
 
   try {
     const chat = await openai.chat.completions.create({
@@ -53,11 +58,18 @@ ${text}
     const result = chat.choices[0].message.content;
     res.json({ result });
   } catch (err) {
-    console.error('GPT 오류:', err.message);
+    console.error('❌ GPT 오류:', err.message);
     res.status(500).json({ error: 'GPT 분석 실패' });
   }
 });
 
-app.listen(3001, () => {
-  console.log('✅ GPT 분석 서버가 http://localhost:3001 에서 실행 중입니다!');
+// 프론트엔드 라우팅 처리 (SPA 대응)
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../client/build/index.html'));
+});
+
+// 서버 실행
+const PORT = process.env.PORT || 3001;
+app.listen(PORT, () => {
+  console.log(`✅ GPT 분석 서버가 http://localhost:${PORT} 에서 실행 중입니다!`);
 });
