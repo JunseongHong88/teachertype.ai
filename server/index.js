@@ -2,8 +2,8 @@
 
 /**
  * Teachertype.ai Backend
- *  - GPT-4o-mini 기반 분석 및 스트리밍 구현
- *  - Express + OpenAI integration
+ * - GPT-4o-mini 기반 분석 및 스트리밍 구현
+ * - Express + OpenAI integration
  */
 
 require('dotenv').config();
@@ -18,26 +18,63 @@ app.use(express.json());
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-// ——————————————
-// 프롬프트 생성 함수
-// ——————————————
+/**
+ * 수업 발화 데이터 분석용 시스템 프롬프트 생성
+ * @param {string} text - 원문 발화 데이터
+ * @returns {string}
+ */
 function createAnalysisPrompt(text) {
   return `당신은 수업 발화 데이터를 분석하는 전문가 GPT입니다.
-출력은 반드시 유효한 JSON 객체여야 합니다.
 
-구조:
+아래 4단계 절차에 따라 JSON 객체를 생성하세요.
+
+1. 전처리 (Preprocessing)
+   - 발화 구분: "교사: …" 또는 "학생: …"로 정렬, 중복·중첩 병합
+   - 메타데이터 추출: speaker ("교사"/"학생"), segment ("도입"/"전개"/"정리"/null)
+   - 텍스트 클렌징: 필러 단어 제거, 비수업용 언급 제거
+   - 토큰화/정규화: 특수문자 제거, 숫자·단위 표준화
+
+2. 유형 분류 (Classification)
+   - Expository: 개념·원리 전달
+   - Questioning: 학생 사고 유도
+   - Feedback: 학생 답변 반응
+   - Directive: 과제·행동 지시
+   - Encouragement: 격려·동기부여
+   기준: 키워드 매핑, 문장 구조 분석
+
+3. 질문 분석 (Question Analysis)
+   - 개방형(Open)/폐쇄형(Closed)
+   - 수렴형(Convergent)/확산형(Divergent)
+   - Bloom 단계: Remember, Understand, Apply, Analyze, Evaluate, Create
+   기준: 질문 길이, 의도어, Bloom 매핑
+
+4. 상호작용 분석 (Interaction Analysis)
+   - 교사-학생 발화 비율
+   - 평균 문장 길이 (단어 수)
+   - 어휘 다양성 (TTR)
+   - 감성 비율 (긍정 vs 부정 어휘)
+
+출력 형식 예시:
 {
-  "전처리": ["교사: ...", "학생: ..."],
-  "유형 분류": ["설명: ...", "질문: ..."],
-  "질문 분석": ["개방형 질문: ...", "..."],
-  "상호작용 분석": ["교사:학생 비율 = ...", "..."]
+  "전처리": [
+    { "speaker":"교사", "segment":"도입", "text":"…" },
+    ...
+  ],
+  "유형 분류": [
+    { "id":1, "category":["Questioning"] },
+    ...
+  ],
+  "질문 분석": [
+    { "id":2, "type":"Open", "mode":"Convergent", "bloom":"Apply" },
+    ...
+  ],
+  "상호작용 분석": {
+    "ratio":1.2,
+    "avgLength":23.3,
+    "ttr":0.45,
+    "sentiment": { "positive":0.8, "negative":0.2 }
+  }
 }
-
-절차:
-1) 전처리: 발화자+원문 추출
-2) 유형 분류: 카테고리별 문장 리스트
-3) 질문 분석: 개방형/폐쇄형 및 Bloom 단계
-4) 상호작용 분석: 비율·길이·어휘 난이도
 
 사용자 데이터:
 """
@@ -45,6 +82,11 @@ ${text}
 """`;
 }
 
+/**
+ * 인사이트 생성용 시스템 프롬프트 생성
+ * @param {object} analysis - 분석 결과 JSON
+ * @returns {string}
+ */
 function createInsightPrompt(analysis) {
   const data = JSON.stringify(analysis, null, 2);
   return `교사 수업 개선 아이디어 제안 전문가로서,
@@ -56,9 +98,7 @@ ${data}
 `;
 }
 
-// ——————————————
-// 1) 비스트리밍 분석 엔드포인트
-// ——————————————
+// 1) 비스트리밍 분석
 app.post('/analyze', async (req, res) => {
   const { text } = req.body;
   const prompt = createAnalysisPrompt(text);
@@ -76,14 +116,11 @@ app.post('/analyze', async (req, res) => {
   }
 });
 
-// ——————————————
-// 2) 스트리밍 분석 엔드포인트
-// ——————————————
+// 2) 스트리밍 분석
 app.post('/analyze-stream', async (req, res) => {
   const { text } = req.body;
   const prompt = createAnalysisPrompt(text);
 
-  // 스트림 헤더
   res.writeHead(200, {
     'Content-Type': 'application/json; charset=utf-8',
     'Transfer-Encoding': 'chunked',
@@ -103,9 +140,7 @@ app.post('/analyze-stream', async (req, res) => {
   res.end();
 });
 
-// ——————————————
-// 3) 인사이트 생성 엔드포인트
-// ——————————————
+// 3) 인사이트 생성
 app.post('/insights', async (req, res) => {
   const { analysis } = req.body;
   const prompt = createInsightPrompt(analysis);
@@ -126,18 +161,14 @@ app.post('/insights', async (req, res) => {
   }
 });
 
-// ——————————————
-// 4) 정적 파일 서빙 & SPA Fallback (라우트 정의 뒤에 배치)
-// ——————————————
+// 4) 정적 파일 서빙 & SPA Fallback
 const clientBuildPath = path.join(__dirname, '../client/build');
 app.use(express.static(clientBuildPath));
 app.use((req, res) => {
   res.sendFile(path.join(clientBuildPath, 'index.html'));
 });
 
-// ——————————————
 // 5) 서버 시작
-// ——————————————
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`✅ 서버 실행 중: http://localhost:${PORT}`);
