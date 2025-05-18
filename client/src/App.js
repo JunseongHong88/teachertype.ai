@@ -1,6 +1,6 @@
 // client/src/App.js
+
 import React, { useState } from 'react';
-import { EventSourcePolyfill } from 'event-source-polyfill';
 
 function App() {
   const [text, setText] = useState('');
@@ -8,41 +8,41 @@ function App() {
   const [insights, setInsights] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // 스트리밍 분석 핸들러
-  const handleAnalyze = () => {
+  // 스트리밍 분석 핸들러 (fetch + ReadableStream)
+  const handleAnalyze = async () => {
     setAnalysis(null);
     setInsights(null);
     setLoading(true);
 
-    const evtSource = new EventSourcePolyfill('/analyze-stream', {
-      headers: { 'Content-Type': 'application/json' },
-      method: 'POST',
-      body: JSON.stringify({ text })
-    });
+    try {
+      const response = await fetch('/analyze-stream', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      });
 
-    let buffer = '';
-    evtSource.onmessage = (e) => {
-      if (e.data === '[DONE]') {
-        try {
-          const result = JSON.parse(buffer);
-          setAnalysis(result);
-        } catch (err) {
-          console.error('파싱 오류', err);
-        }
-        setLoading(false);
-        evtSource.close();
-      } else {
-        buffer += JSON.parse(e.data);
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder('utf-8');
+      let buffer = '';
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        // (선택) 부분 렌더링:
+        // setAnalysis(JSON.parse(buffer));
       }
-    };
-    evtSource.onerror = (err) => {
-      console.error('스트리밍 오류', err);
+
+      const result = JSON.parse(buffer);
+      setAnalysis(result);
+    } catch (err) {
+      console.error('스트리밍 분석 오류', err);
+    } finally {
       setLoading(false);
-      evtSource.close();
-    };
+    }
   };
 
-  // 인사이트 생성
+  // 인사이트 생성 핸들러
   const handleInsights = async () => {
     if (!analysis) return;
     setLoading(true);
@@ -50,7 +50,7 @@ function App() {
       const res = await fetch('/insights', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ analysis })
+        body: JSON.stringify({ analysis }),
       });
       const data = await res.json();
       setInsights(data.insights);
@@ -61,18 +61,27 @@ function App() {
     }
   };
 
+  // 발화자별 색상 유틸
+  const getItemClass = (item) => {
+    if (item.startsWith('교사')) return 'text-red-600';
+    if (item.startsWith('학생')) return 'text-blue-600';
+    return 'text-gray-700';
+  };
+
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-lg p-8 max-w-3xl w-full">
         <h1 className="text-3xl font-semibold text-center mb-6">
           수업 발화 분석 & 인사이트 제안
         </h1>
+
         <textarea
           className="w-full h-64 p-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 resize-y"
           placeholder="원문 발화 데이터를 여기에 붙여넣으세요."
           value={text}
           onChange={(e) => setText(e.target.value)}
         />
+
         <div className="flex justify-center space-x-4 mt-4">
           <button
             onClick={handleAnalyze}
@@ -104,7 +113,7 @@ function App() {
                 <h3 className="text-xl font-medium mb-2">{section}</h3>
                 <ul className="list-disc list-inside space-y-1 max-h-64 overflow-auto">
                   {items.map((item, idx) => (
-                    <li key={idx} className="text-gray-700">
+                    <li key={idx} className={getItemClass(item)}>
                       {item}
                     </li>
                   ))}
